@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Home</title>
+
+<style>
+body{font-family:Arial;margin:0;background:#fafafa}
+header{background:white;padding:15px;border-bottom:1px solid #ddd}
+button{cursor:pointer}
+.card{background:white;margin:10px;border:1px solid #ddd;border-radius:8px}
+img{max-width:100%}
+</style>
+</head>
+
+<body>
+
+<header>
+  InstaClone
+  <button onclick="logout()" style="float:right">Logout</button>
+</header>
+
+<div style="padding:10px">
+  <input type="file" id="postImage"><br><br>
+  <input id="postCaption" placeholder="Caption"><br><br>
+  <button onclick="createPost()">Post</button>
+</div>
+
+<div id="feed"></div>
+
+<script>
+
+// 🔑 KEYS
+const BIN_ID="69c7a7325fdde57455098762";
+const API_KEY="$2a$10$22rnf9jqZanltTN2h.p51eEuy1cDDc7tG70N7qI7O/WYSwH1MLqk6";
+
+let user=JSON.parse(localStorage.getItem("user"));
+if(!user) location="login.html";
+
+let db={users:[],posts:[]};
+
+async function loadData(){
+  let res=await fetch(`https://api.jsonbin.io/v3/b/${BIN_ID}/latest`,{
+    headers:{"X-Master-Key":API_KEY}
+  });
+  db=(await res.json()).record;
+  render();
+}
+
+async function saveData(){
+  await fetch(`https://api.jsonbin.io/v3/b/${BIN_ID}`,{
+    method:"PUT",
+    headers:{
+      "Content-Type":"application/json",
+      "X-Master-Key":API_KEY
+    },
+    body:JSON.stringify(db)
+  });
+}
+
+function toBase64(file){
+  return new Promise(res=>{
+    let r=new FileReader();
+    r.readAsDataURL(file);
+    r.onload=()=>res(r.result);
+  });
+}
+
+async function createPost(){
+  let file=postImage.files[0];
+  if(!file){alert("Select image");return;}
+
+  let img=await toBase64(file);
+
+  db.posts.unshift({
+    id:Date.now(),
+    username:user.username,
+    profilePic:user.profilePic,
+    image:img,
+    caption:postCaption.value,
+    likes:0,
+    comments:[]
+  });
+
+  await saveData();
+  render();
+}
+
+function likePost(id){
+  let p=db.posts.find(x=>x.id==id);
+  p.likes++;
+  saveData();render();
+}
+
+function addComment(id,input){
+  if(!input.value)return;
+  let p=db.posts.find(x=>x.id==id);
+  p.comments.push({user:user.username,text:input.value});
+  input.value="";
+  saveData();render();
+}
+
+function render(){
+  feed.innerHTML="";
+  db.posts.forEach(p=>{
+    let div=document.createElement("div");
+    div.className="card";
+
+    div.innerHTML=`
+      <div style="padding:10px">
+        <img src="${p.profilePic}" width="30"> <b>${p.username}</b>
+      </div>
+      <img src="${p.image}">
+      <div style="padding:10px">
+        ❤️ ${p.likes}
+        <button onclick="likePost(${p.id})">Like</button>
+        <p>${p.caption}</p>
+      </div>
+      <div id="c-${p.id}"></div>
+      <input id="i-${p.id}">
+      <button onclick="addComment(${p.id},document.getElementById('i-${p.id}'))">Send</button>
+    `;
+
+    let c=div.querySelector(`#c-${p.id}`);
+    p.comments.forEach(cm=>{
+      let d=document.createElement("div");
+      d.innerHTML=`<b>${cm.user}</b>: ${cm.text}`;
+      c.appendChild(d);
+    });
+
+    feed.appendChild(div);
+  });
+}
+
+function logout(){
+  localStorage.removeItem("user");
+  location="login.html";
+}
+
+loadData();
+
+</script>
+</body>
+</html>
