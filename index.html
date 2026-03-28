@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Login</title>
+
+<style>
+body{font-family:Arial;background:gray;margin:0}
+.box{background:blue;padding:20px;border-radius:10px;width:250px;margin:auto;margin-top:100px;text-align:center;color:white}
+input{width:90%;padding:8px;margin:5px}
+img{width:80px;height:80px;border-radius:50%;margin:10px}
+</style>
+</head>
+
+<body>
+
+<div class="box">
+  <h3>Login / Register</h3>
+
+  <input id="username" placeholder="Username">
+  <input type="password" id="password" placeholder="Password">
+  <input type="file" id="profilePic">
+
+  <img id="preview" src="https://via.placeholder.com/80">
+
+  <button onclick="createAccount()">Continue</button>
+</div>
+
+<script>
+
+// 🔑 PUT YOUR KEYS
+const BIN_ID = "69c7a7325fdde57455098762";
+const API_KEY = "$2a$10$22rnf9jqZanltTN2h.p51eEuy1cDDc7tG70N7qI7O/WYSwH1MLqk6";
+
+profilePic.onchange = ()=>{
+  let file = profilePic.files[0];
+  if(file) preview.src = URL.createObjectURL(file);
+};
+
+function toBase64(file){
+  return new Promise(res=>{
+    let reader=new FileReader();
+    reader.readAsDataURL(file);
+    reader.onload=()=>res(reader.result);
+  });
+}
+
+async function loadDB(){
+  let res = await fetch(`https://api.jsonbin.io/v3/b/${BIN_ID}/latest`,{
+    headers:{ "X-Master-Key": API_KEY }
+  });
+  return (await res.json()).record;
+}
+
+async function saveDB(db){
+  await fetch(`https://api.jsonbin.io/v3/b/${BIN_ID}`,{
+    method:"PUT",
+    headers:{
+      "Content-Type":"application/json",
+      "X-Master-Key": API_KEY
+    },
+    body:JSON.stringify(db)
+  });
+}
+
+async function createAccount(){
+  let name=username.value;
+  let pass=password.value;
+  let file=profilePic.files[0];
+
+  if(!name||!pass){alert("Fill all fields");return;}
+
+  let db = await loadDB();
+
+  let user=db.users.find(u=>u.username===name);
+
+  if(user){
+    if(user.password===pass){
+      localStorage.setItem("user",JSON.stringify(user));
+      location="home.html";
+    }else alert("Wrong password");
+    return;
+  }
+
+  let img="https://via.placeholder.com/80";
+  if(file) img=await toBase64(file);
+
+  let newUser={
+    id:Date.now(),
+    username:name,
+    password:pass,
+    profilePic:img
+  };
+
+  db.users.push(newUser);
+  await saveDB(db);
+
+  localStorage.setItem("user",JSON.stringify(newUser));
+  location="home.html";
+}
+
+</script>
+</body>
+  </html>
