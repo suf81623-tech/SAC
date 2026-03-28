@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Profile</title>
+
+<style>
+body{text-align:center;font-family:Arial;background:#f5f5f5}
+img{width:100px;height:100px;border-radius:50%}
+button{padding:10px;margin:5px}
+</style>
+</head>
+
+<body>
+
+<h2>My Profile</h2>
+
+<img id="pic"><br>
+<h3 id="name"></h3>
+
+<input id="newName" placeholder="New name"><br>
+<input type="file" id="newPic"><br>
+
+<button onclick="update()">Save</button>
+<button onclick="logout()">Logout</button>
+<button onclick="home()">Home</button>
+
+<script>
+
+let user=JSON.parse(localStorage.getItem("user"));
+if(!user) location="login.html";
+
+pic.src=user.profilePic;
+name.innerText=user.username;
+
+function toBase64(file){
+  return new Promise(r=>{
+    let fr=new FileReader();
+    fr.readAsDataURL(file);
+    fr.onload=()=>r(fr.result);
+  });
+}
+
+async function update(){
+  let n=newName.value||user.username;
+  let file=newPic.files[0];
+  let img=user.profilePic;
+
+  if(file) img=await toBase64(file);
+
+  user.username=n;
+  user.profilePic=img;
+
+  localStorage.setItem("user",JSON.stringify(user));
+  alert("Updated");
+  location.reload();
+}
+
+function logout(){
+  localStorage.removeItem("user");
+  location="login.html";
+}
+
+function home(){
+  location="home.html";
+}
+
+</script>
+</body>
+</html>
